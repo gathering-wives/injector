@@ -1,7 +1,7 @@
 use clap::Parser;
 use thiserror::Error;
 
-use tracing::info;
+use tracing::{debug, info};
 use tracing_subscriber::FmtSubscriber;
 
 mod config;
@@ -12,8 +12,8 @@ mod launcher;
 struct Args {
     #[arg(short, long, default_value = "./config.toml")]
     config_path: String,
-    #[arg(short, long, default_value_t = false)]
-    verbose: bool,
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
 }
 
 #[derive(Error, Debug)]
@@ -29,9 +29,13 @@ enum Error {
 fn main() -> Result<(), Error> {
     let args = Args::parse();
 
-    if args.verbose {
+    if args.verbose > 0 {
         let subscriber = FmtSubscriber::builder()
-            .with_max_level(tracing::Level::INFO)
+            .with_max_level(match args.verbose {
+                1 => tracing::Level::INFO,
+                2 => tracing::Level::DEBUG,
+                _ => tracing::Level::TRACE,
+            })
             .finish();
 
         tracing::subscriber::set_global_default(subscriber)
@@ -50,18 +54,21 @@ fn main() -> Result<(), Error> {
 
     unsafe {
         info!("Launching process...");
+
         let info = launcher::launch(
             &config.executable_path,
             config.args.as_ref(),
             config.current_directory.as_ref(),
         )?;
+        debug!("{:?}", info);
+
         let handle = info.hProcess;
 
         if let Some(deps) = config.dependencies.as_ref() {
             info!("Injecting {} dependencies...", deps.len());
 
             for dep in deps {
-                info!("Injecting \"{}\"...", dep);
+                debug!("Injecting \"{}\"...", dep);
                 injector::inject(handle, dep).unwrap();
             }
         } else {
