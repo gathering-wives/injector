@@ -11,8 +11,10 @@ mod launcher;
 #[derive(Parser)]
 struct Args {
     #[arg(short, long, default_value = "./config.toml")]
+    /// Relative or absolute path to config file.
     config_path: String,
     #[arg(short, long, action = clap::ArgAction::Count)]
+    /// Verbosity level. -v for INFO, -vv for DEBUG, -vvv for TRACE.
     verbose: u8,
 }
 

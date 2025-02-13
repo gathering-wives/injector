@@ -9,8 +9,8 @@ $ injector --help
 Usage: injector [OPTIONS]
 
 Options:
-  -c, --config-path <CONFIG_PATH>  [default: ./config.toml]
-  -v, --verbose
+  -c, --config-path <CONFIG_PATH>  Relative or absolute path to config file [default: ./config.toml]
+  -v, --verbose...                 Verbosity level. -v for INFO, -vv for DEBUG, -vvv for TRACE
   -h, --help                       Print help
 ```
 
