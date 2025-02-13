@@ -62,7 +62,6 @@ fn main() -> Result<(), Error> {
             config.args.as_ref(),
             config.current_directory.as_ref(),
         )?;
-        debug!("{:?}", info);
 
         let handle = info.hProcess;
 

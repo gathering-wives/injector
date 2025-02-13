@@ -1,4 +1,5 @@
 use thiserror::Error;
+use tracing::{debug, trace};
 use windows::Win32::System::Threading::PROCESS_INFORMATION;
 
 #[derive(Error, Debug)]
@@ -33,16 +34,19 @@ pub unsafe fn launch(
 
     // Obtain PID of explorer.exe
     let explorer_pid = get_explorer_pid().ok_or(Error::GetExplorerPidFailed)?;
+    trace!("explorer pid: {}", explorer_pid);
 
     // Open current process token.
     let mut token: HANDLE = std::mem::zeroed();
     OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &raw mut token)
         .map_err(Error::OpenProcessTokenFailed)?;
+    trace!("current process token: {:?}", token);
 
     // Open handle to explorer.exe
     // TODO: proper access rights
     let explorer_handle =
         OpenProcess(PROCESS_ALL_ACCESS, false, explorer_pid).map_err(Error::CreateProcessFailed)?;
+    trace!("explorer handle: {:?}", explorer_handle);
 
     // Initialize process thread attribute list.
     let mut attr_size = 0;
@@ -52,6 +56,7 @@ pub unsafe fn launch(
         0,
         &raw mut attr_size,
     );
+    trace!("attr size: {}", attr_size);
 
     // Populate process thread attribute list.
     let attribute_list = vec![0u8; attr_size];
@@ -82,6 +87,7 @@ pub unsafe fn launch(
         Some(cwd) => PathBuf::from(cwd),
         None => PathBuf::from(path).parent().unwrap().to_path_buf(),
     };
+    trace!("cwd: {}", cwd_buf.as_path().display());
 
     // TODO: support command line args
 
@@ -101,6 +107,12 @@ pub unsafe fn launch(
         &raw mut pi,
     )
     .map_err(Error::CreateProcessFailed)?;
+
+    debug!(
+        "Process ID: {} (Handle: {:?})",
+        pi.dwProcessId, pi.hProcess.0
+    );
+    debug!("Thread ID: {} (Handle: {:?})", pi.dwThreadId, pi.hThread.0);
 
     // We are done here.
     Ok(pi)

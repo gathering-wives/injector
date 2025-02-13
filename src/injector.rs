@@ -1,4 +1,5 @@
 use thiserror::Error;
+use tracing::trace;
 use windows::Win32::Foundation::HANDLE;
 
 #[derive(Error, Debug)]
@@ -33,8 +34,10 @@ pub unsafe fn inject(handle: HANDLE, path: &str) -> Result<(), Error> {
     // Look up the LoadLibraryW function in kernel32.dll.
     let kernel32 = GetModuleHandleA(PCSTR::from_raw("kernel32.dll\0".as_ptr()))
         .map_err(|x| Error::Kernel32NotFound(x))?;
+    trace!("kernel32 addr: {:?}", kernel32.0);
     let load_library = GetProcAddress(kernel32, PCSTR::from_raw("LoadLibraryW\0".as_ptr()))
         .ok_or(Error::LoadLibraryNotFound)?;
+    trace!("load_library addr: {:?}", load_library as *const ());
 
     // Allocate memory for the path string.
     let addr = VirtualAllocEx(
@@ -44,6 +47,7 @@ pub unsafe fn inject(handle: HANDLE, path: &str) -> Result<(), Error> {
         MEM_COMMIT | MEM_RESERVE,
         PAGE_READWRITE,
     );
+    trace!("allocated mem: {:?}", addr);
 
     // Make sure its succeeded.
     if addr.is_null() {
@@ -65,6 +69,7 @@ pub unsafe fn inject(handle: HANDLE, path: &str) -> Result<(), Error> {
         None,
     )
     .map_err(|x| Error::CreateRemoteThread(x))?;
+    trace!("thread_handle: {:?}", thread_handle);
 
     // Wait for the thread to finish.
     WaitForSingleObject(thread_handle, 0xFFFFFFFF);
